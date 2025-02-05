@@ -17,7 +17,10 @@
             <label for="password">Пароль</label>
             <input type="password" id="password" />
           </div>
-          <button type="submit">Зберегти зміни</button>
+          <div class="button-group">
+            <button type="submit" class="login-button">Вхід</button>
+            <button type="button" class="register-button">Реєстрація</button>
+          </div>
         </form>
       </div>
     </div>
@@ -91,16 +94,31 @@ input {
   border-radius: 4px;
 }
 
+.button-group {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 button {
   padding: 0.5rem 1rem;
   border: none;
-  background-color: #333;
-  color: #fff;
   border-radius: 4px;
   cursor: pointer;
+  font-size: 16px;
+}
+
+.login-button {
+  background-color: #333;
+  color: #fff;
+}
+
+.register-button {
+  background-color: #555;
+  color: #fff;
 }
 
 button:hover {
-  background-color: #555;
+  opacity: 0.9;
 }
 </style>

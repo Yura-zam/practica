@@ -10,7 +10,7 @@
 
 <style scoped>
 .home-page {
-  background-image: url('@/assets/background.jpg'); /* Фонова картинка */
+  background-image: url('@/assets/background.jpg'); /* Фон */
   background-size: cover;
   background-position: center;
   min-height: 100vh;
@@ -23,7 +23,7 @@
 }
 
 .welcome-box {
-  background-color: rgba(0, 0, 0, 0.6); /* Напівпрозорий фон */
+  background-color: rgba(0, 0, 0, 0.6); /* Півпрозорий чорний фон */
   padding: 30px;
   border-radius: 10px;
   max-width: 500px;

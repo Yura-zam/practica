@@ -4,7 +4,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background-image: url('@/assets/background.jpg'); /* Замініть на URL вашого фону */
+  background-image: url('@/assets/background.jpg');
   background-size: cover;
   background-position: center;
   min-height: 100vh;
@@ -13,11 +13,11 @@
 }
 
 .info-box {
-  background: rgba(255, 255, 255, 0.8); /* Білий напівпрозорий фон */
+  background: rgba(255, 255, 255, 0.8);  /* фон */
   padding: 20px;
   border-radius: 10px;
   max-width: 800px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Тінь для більшої глибини */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Тінь */
   text-align: center;
 }
 
