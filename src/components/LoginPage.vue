@@ -1,40 +1,37 @@
 <template>
-  <div class="account-page">
+  <div class="login-page">
     <div class="background"></div>
     <div class="content-container">
       <div class="white-box">
-        <h1>Ваш акаунт</h1>
-        <form>
-          <div class="form-group">
-            <label for="name">Ім'я</label>
-            <input type="text" id="name" />
-          </div>
-          <div class="form-group">
-            <label for="email">Електронна пошта</label>
-            <input type="email" id="email" />
-          </div>
-          <div class="form-group">
-            <label for="password">Пароль</label>
-            <input type="password" id="password" />
-          </div>
-          <div class="button-group">
-            <button type="submit" class="login-button">Вхід</button>
-            <button type="button" class="register-button">Реєстрація</button>
-          </div>
-        </form>
-      </div>
+    <h1>Ваш акаунт</h1>
+    <input type="text" placeholder="Ім'я" />
+    <input type="email" placeholder="Електронна пошта" />
+    <input type="password" placeholder="Пароль" />
+    <div class="button-group">
+      <button @click="login" class="login-button">Вхід</button>
+      <button @click="register" class="register-button">Реєстрація</button>
     </div>
   </div>
+</div>
+</div>
 </template>
 
 <script>
 export default {
-  name: "AccountPage",
+  methods: {
+    login() {
+      this.$router.push('/account'); // Переходить на UserPage.vue
+    },
+    register() {
+      this.$router.push('/account'); // Можна перенаправити на ту ж або іншу сторінку
+    },
+  },
 };
 </script>
 
+
 <style scoped>
-.account-page {
+.login-page {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -90,8 +87,10 @@ label {
 
 input {
   padding: 0.5rem;
-  border: 1px solid #ccc;
+  border: 1px solid #0e0505;
   border-radius: 4px;
+  margin-bottom: 1rem;
+  width: 100%;
 }
 
 .button-group {
@@ -109,13 +108,21 @@ button {
 }
 
 .login-button {
-  background-color: #333;
-  color: #fff;
+    background-color: red;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  margin-top: 10px;
 }
 
 .register-button {
-  background-color: #555;
-  color: #fff;
+    background-color: red;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  margin-top: 10px;
 }
 
 button:hover {

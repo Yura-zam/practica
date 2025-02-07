@@ -1,352 +1,265 @@
 <template>
-  <div class="catalog-page">
-    <div class="catalog-header">
-      <h1>Каталог</h1>
-      <input
-        class="search-bar"
-        v-model="searchQuery"
-        type="text"
-        placeholder="Пошук..."
-      />
-      <button @click="toggleCart" class="cart-button">
-        Кошик ({{ cart.length }})
-      </button>
-    </div>
-    <div class="filter-section">
-      <div class="tags-filter">
-        <label>
-          Сортування за тегом:
-          <select v-model="sortByTag">
-            <option value="">Усі товари</option>
-            <option v-for="tag in availableTags" :key="tag" :value="tag">
-              {{ tag }}
-            </option>
-          </select>
-        </label>
-      </div>
-    </div>
-    <div class="catalog">
-      <div
-        v-for="product in sortedAndFilteredProducts"
-        :key="product.id"
-        class="product-card"
-      >
-        <img :src="product.image" alt="Product Image" />
-        <h2>{{ product.name }}</h2>
-        <p>Ціна: {{ product.price }} грн</p>
-        <p>Теги: {{ product.tags.join(", ") }}</p>
-        <button @click="addToCart(product)">Купити</button>
-      </div>
+  <div class="catalog">
+    <header class="header">
+      <div class="logo">Old Mans Wheel</div>
+    </header>
+    
+    <div class="search-bar">
+      <input type="text" v-model="searchQuery" placeholder="ДЕТАЛЬ" />
+      <select v-model="selectedTag" @change="filterByTag">
+        <option value="">Всі теги</option>
+        <option v-for="tag in uniqueTags" :key="tag" :value="tag">{{ tag }}</option>
+      </select>
     </div>
 
-    <!-- Модальне вікно кошика -->
-    <div v-if="isCartOpen" class="cart-modal">
-      <div class="cart-content">
-        <button class="close-button" @click="toggleCart">Закрити</button>
-        <h2>Ваш кошик</h2>
-        <div v-if="cart.length === 0">
-          <p>Кошик порожній.</p>
-        </div>
-        <div v-else>
-          <ul>
-            <li v-for="item in cart" :key="item.id">
-              {{ item.name }} - {{ item.price }} грн
-              <button @click="removeFromCart(item)">Видалити</button>
-            </li>
-          </ul>
-          <h3>Загальна сума: {{ totalPrice }} грн</h3>
-          <button @click="processPayment">Оформити замовлення</button>
-        </div>
+    <main class="catalog-grid">
+      <div v-for="item in filteredItems" :key="item.id" class="catalog-item" @click="showDetails(item)">
+        <div class="image">Картинка</div>
+        <div class="title">{{ item.name }}</div>
+        <button @click.stop="addToCart(item)">Додати до кошика</button>
       </div>
+    </main>
+
+    <div v-if="selectedItem" class="item-details">
+      <h2>{{ selectedItem.name }}</h2>
+      <p>Ціна: {{ selectedItem.price }}</p>
+      <p>Опис: {{ selectedItem.description }}</p>
+      <button @click="closeDetails">Закрити</button>
+    </div>
+
+    <footer class="footer">
+      <div class="cart-icon" @click="toggleCart">🛒</div>
+    </footer>
+
+    <div v-if="showCart" class="cart">
+      <h2>Кошик</h2>
+      <div v-for="item in cart" :key="item.id" class="cart-item">
+        <div>{{ item.name }}</div>
+        <div>{{ item.price }}</div>
+        <div>Кількість: {{ item.quantity }}</div>
+      </div>
+      <div class="total">
+        <p>Загальна сума: {{ totalPrice }}</p>
+      </div>
+      <div class="payment-method">
+        <label for="payment">Спосіб оплати:</label>
+        <select id="payment" v-model="paymentMethod">
+          <option value="credit-card">Кредитна картка</option>
+          <option value="paypal">PayPal</option>
+          <option value="cash">Готівка</option>
+        </select>
+      </div>
+      <button @click="checkout">Оформити замовлення</button>
     </div>
   </div>
 </template>
 
 <script>
 export default {
-  name: "CatalogPage",
   data() {
     return {
-      searchQuery: "",
-      sortByTag: "",
-      availableTags: ["Популярні", "Новинка", "Знижки"],
-      products: [
-        {
-          id: 1,
-          name: "Товар 1",
-          image: require("@/assets/image/3.jpg"),
-          price: 15000,
-          tags: ["Новинка", "Знижки"],
-        },
-        {
-          id: 2,
-          name: "Товар 2",
-          image: require("@/assets/image/6.jpg"),
-          price: 1200,
-          tags: ["Популярні"],
-        },
-        {
-          id: 3,
-          name: "Товар 3",
-          image: require("@/assets/image/bar.jpg"),
-          price: 800,
-          tags: ["Новинка"],
-        },
-        {
-          id: 4,
-          name: "Товар 4",
-          image: require("@/assets/image/brake cilin.png"),
-          price: 800,
-          tags: ["Новинка"],
-        },
-        {
-          id: 5,
-          name: "Товар 5",
-          image: require("@/assets/image/brake disk.jpg"),
-          price: 800,
-          tags: ["Новинка", "Знижки"],
-        },
+      searchQuery: '',
+      selectedTag: '',
+      selectedItem: null,
+      showCart: false,
+      paymentMethod: 'credit-card',
+      cart: [],
+      items: [
+        { id: 1, name: 'Назва 1', price: '100 грн', description: 'Опис 1', tags: ['tag1', 'tag2'] },
+        { id: 2, name: 'Назва 2', price: '200 грн', description: 'Опис 2', tags: ['tag2', 'tag3'] },
+        { id: 3, name: 'Назва 3', price: '300 грн', description: 'Опис 3', tags: ['tag1'] },
+        { id: 4, name: 'Назва 4', price: '400 грн', description: 'Опис 4', tags: ['tag3'] },
+        { id: 5, name: 'Назва 5', price: '500 грн', description: 'Опис 5', tags: ['tag2'] },
+        { id: 6, name: 'Назва 6', price: '600 грн', description: 'Опис 6', tags: ['tag1', 'tag3'] },
+        { id: 7, name: 'Назва 7', price: '700 грн', description: 'Опис 7', tags: ['tag2'] },
+        { id: 8, name: 'Назва 8', price: '800 грн', description: 'Опис 8', tags: ['tag1'] },
       ],
-      cart: [], // Товари в кошику
-      isCartOpen: false, // Чи відкрите модальне вікно кошика
     };
   },
   computed: {
-    filteredProducts() {
-      return this.products.filter((product) => {
-        const matchesSearch = product.name
-          .toLowerCase()
-          .includes(this.searchQuery.toLowerCase());
-
-        const matchesTags = this.sortByTag
-          ? product.tags.includes(this.sortByTag)
-          : true;
-
-        return matchesSearch && matchesTags;
-      });
+    filteredItems() {
+      let items = this.items.filter(item =>
+        item.name.toLowerCase().includes(this.searchQuery.toLowerCase())
+      );
+      if (this.selectedTag) {
+        items = items.filter(item => item.tags.includes(this.selectedTag));
+      }
+      return items;
     },
-    sortedAndFilteredProducts() {
-      return this.filteredProducts;
+    uniqueTags() {
+      const tags = new Set();
+      this.items.forEach(item => {
+        item.tags.forEach(tag => tags.add(tag));
+      });
+      return Array.from(tags);
     },
     totalPrice() {
-      return this.cart.reduce((sum, item) => sum + item.price, 0);
+      return this.cart.reduce((total, item) => total + parseFloat(item.price) * item.quantity, 0) + ' грн';
     },
   },
   methods: {
-    addToCart(product) {
-      this.cart.push(product);
+    filterByTag() {
+      console.log('Filtering by tag:', this.selectedTag);
     },
-    removeFromCart(product) {
-      this.cart = this.cart.filter((item) => item.id !== product.id);
+    showDetails(item) {
+      this.selectedItem = item;
+    },
+    closeDetails() {
+      this.selectedItem = null;
+    },
+    addToCart(item) {
+      const cartItem = this.cart.find(cartItem => cartItem.id === item.id);
+      if (cartItem) {
+        cartItem.quantity++;
+      } else {
+        this.cart.push({ ...item, quantity: 1 });
+      }
     },
     toggleCart() {
-      this.isCartOpen = !this.isCartOpen;
+      this.showCart = !this.showCart;
     },
-    processPayment() {
-      alert("Замовлення оформлено!");
+    checkout() {
+      alert(`Замовлення оформлено! Спосіб оплати: ${this.paymentMethod}`);
       this.cart = [];
-      this.isCartOpen = false;
+      this.showCart = false;
     },
   },
 };
 </script>
 
 <style scoped>
-.catalog-page {
-  display: flex;
-  flex-direction: column;
-  background-image: url('@/assets/background.jpg');
-  background-size: cover;
-  background-position: center;
-  min-height: 100vh;
-  padding: 20px;
-  color: white;
+.catalog {
+  font-family: Arial, sans-serif;
+  color: #fff;
+  background-color: #222;
+  padding: 10px;
 }
 
-.product-card h2,
-.product-card p {
-  color: black;
-}
-
-
-.catalog-header {
+.header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+}
+
+.logo {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.nav button {
+  margin: 0 5px;
+  background-color: #444;
+  color: #fff;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.nav button:hover {
+  background-color: #666;
 }
 
 .search-bar {
-  padding: 10px;
-  border: none;
-  border-radius: 5px;
-  width: 200px;
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
 }
 
-.cart-button {
-  background-color: #ff5722;
-  color: white;
-  border: none;
+.search-bar input {
+  padding: 5px;
+  width: 200px;
+  margin-right: 10px;
+}
+
+.search-bar select {
+  padding: 5px;
+  width: 150px;
+}
+
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.catalog-item {
+  background-color: #333;
+  text-align: center;
+  padding: 10px;
   border-radius: 5px;
-  padding: 10px 20px;
   cursor: pointer;
 }
 
-.cart-button:hover {
-  background-color: #e64a19;
+.catalog-item:hover {
+  background-color: #555;
 }
 
-.catalog {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-
-.product-card {
-  background: rgba(255, 255, 255, 0.95);
-  padding: 15px;
-  border-radius: 10px;
-  text-align: center;
-  width: calc(33.33% - 20px);
-}
-
-.product-card img {
-  width: 120px;
-  height: 120px;
-  object-fit: cover;
-  border-radius: 5px;
+.image {
+  background-color: #555;
+  height: 100px;
   margin-bottom: 10px;
 }
 
-.cart-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
+.title {
+  font-size: 14px;
 }
 
-.cart-content {
-  background: white;
+.item-details {
+  background-color: #444;
   padding: 20px;
   border-radius: 10px;
-  width: 400px;
+  margin-top: 20px;
+  color: #fff;
 }
 
-.close-button {
-  background: red;
-  color: white;
-  border: none;
-  border-radius: 5px;
+.footer {
+  display: flex;
+  justify-content: flex-end;
   padding: 10px;
-  float: right;
+}
+
+.cart-icon {
+  font-size: 20px;
   cursor: pointer;
 }
 
-
-.close-button:hover {
-  background: darkred;
-}
-</style>
-<style scoped>
-.catalog-page {
-  display: flex;
-  flex-direction: column;
-  background-color: white;
-  color: while;
-  min-height: 100vh;
+.cart {
+  background-color: #333;
   padding: 20px;
+  border-radius: 10px;
+  position: fixed;
+  top: 50px;
+  right: 20px;
+  width: 300px;
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
-.product-card h2,
-.product-card p {
-  color: black;
-}
-
-.catalog-header {
+.cart-item {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.search-bar {
-  padding: 10px;
-  border: none;
-  border-radius: 5px;
-  width: 200px;
-}
-
-.cart-button {
-  background-color: #ff5722;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  padding: 10px 20px;
-  cursor: pointer;
-}
-
-.cart-button:hover {
-  background-color: #e64a19;
-}
-
-.catalog {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-
-.product-card {
-  background: rgba(255, 255, 255, 0.95);
-  padding: 15px;
-  border-radius: 10px;
-  text-align: center;
-  width: calc(33.33% - 20px);
-}
-
-.product-card img {
-  width: 120px;
-  height: 120px;
-  object-fit: cover;
-  border-radius: 5px;
   margin-bottom: 10px;
 }
 
-.cart-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
+.total {
+  margin-top: 20px;
+  font-weight: bold;
 }
 
-.cart-content {
-  background: white;
-  color: black;
-  padding: 20px;
-  border-radius: 10px;
-  width: 400px;
+.payment-method {
+  margin-top: 20px;
 }
 
-.close-button {
-  background: red;
-  color: white;
+button {
+  background-color: #444;
+  color: #fff;
   border: none;
-  border-radius: 5px;
   padding: 10px;
-  float: right;
   cursor: pointer;
+  border-radius: 5px;
 }
 
-.close-button:hover {
-  background: darkred;
+button:hover {
+  background-color: #666;
 }
 </style>

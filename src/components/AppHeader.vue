@@ -7,7 +7,8 @@
     <nav class="nav-buttons">
       <router-link to="/catalog" class="btn">Каталог</router-link>
       <router-link to="/about" class="btn">Про нас</router-link>
-      <router-link to="/account" class="btn">Аккаунт</router-link>
+      <router-link to="/account" class="btn">Сторінка</router-link>
+      <router-link to="/login" class="btn">Вхід</router-link>
 
     </nav>
   </header>
