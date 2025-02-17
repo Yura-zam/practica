@@ -3,32 +3,116 @@
     <div class="background"></div>
     <div class="content-container">
       <div class="white-box">
-    <h1>Ваш акаунт</h1>
-    <input type="text" placeholder="Ім'я" />
-    <input type="email" placeholder="Електронна пошта" />
-    <input type="password" placeholder="Пароль" />
-    <div class="button-group">
-      <button @click="login" class="login-button">Вхід</button>
-      <button @click="register" class="register-button">Реєстрація</button>
+        <h1>{{ isRegistering ? 'Реєстрація' : 'Вхід' }}</h1>
+        <input
+          type="text"
+          v-model="name"
+          placeholder="Ім'я"
+          v-if="isRegistering"
+        />
+        <input type="email" v-model="email" placeholder="Електронна пошта" />
+        <input type="password" v-model="password" placeholder="Пароль" />
+        <input
+          type="text"
+          v-model="fullName"
+          placeholder="Повне ім'я"
+          v-if="isRegistering"
+        />
+        <input
+          type="text"
+          v-model="phone"
+          placeholder="Телефон"
+          v-if="isRegistering"
+        />
+        <input
+          type="text"
+          v-model="address"
+          placeholder="Адреса"
+          v-if="isRegistering"
+        />
+        <div class="button-group">
+          <button @click="login" class="login-button" v-if="!isRegistering">
+            Вхід
+          </button>
+          <button @click="register" class="register-button" v-if="isRegistering">
+            Реєстрація
+          </button>
+          <button @click="toggleForm" class="toggle-button">
+            {{ isRegistering ? 'Вхід' : 'Реєстрація' }}
+          </button>
+        </div>
+      </div>
     </div>
   </div>
-</div>
-</div>
 </template>
 
 <script>
 export default {
+  data() {
+    return {
+      name: '',
+      email: '',
+      password: '',
+      fullName: '',
+      phone: '',
+      address: '',
+      isRegistering: false,
+    };
+  },
   methods: {
-    login() {
-      this.$router.push('/account'); // Переходить на UserPage.vue
+    async login() {
+      try {
+        const response = await fetch('http://localhost:8080/api/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email: this.email, password: this.password }),
+        });
+        const data = await response.json();
+        if (response.ok) {
+          localStorage.setItem('token', data.token);
+          this.$router.push('/account');
+        } else {
+          alert(data.message);
+        }
+      } catch (err) {
+        console.error('Error logging in:', err);
+      }
     },
-    register() {
-      this.$router.push('/account'); // Можна перенаправити на ту ж або іншу сторінку
+    async register() {
+      try {
+        const response = await fetch('http://localhost:8080/api/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            username: this.name,
+            email: this.email,
+            password: this.password,
+            full_name: this.fullName,
+            phone: this.phone,
+            address: this.address,
+          }),
+        });
+        const data = await response.json();
+        if (response.ok) {
+          alert('Реєстрація успішна! Тепер ви можете увійти.');
+          this.toggleForm();
+        } else {
+          alert(data.message);
+        }
+      } catch (err) {
+        console.error('Error registering:', err);
+      }
+    },
+    toggleForm() {
+      this.isRegistering = !this.isRegistering;
     },
   },
 };
 </script>
-
 
 <style scoped>
 .login-page {
@@ -67,24 +151,6 @@ export default {
   text-align: center;
 }
 
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  width: 100%;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  text-align: left;
-}
-
-label {
-  font-weight: bold;
-  margin-bottom: 0.5rem;
-}
-
 input {
   padding: 0.5rem;
   border: 1px solid #0e0505;
@@ -108,7 +174,7 @@ button {
 }
 
 .login-button {
-    background-color: red;
+  background-color: red;
   color: white;
   padding: 10px 20px;
   border: none;
@@ -117,7 +183,16 @@ button {
 }
 
 .register-button {
-    background-color: red;
+  background-color: red;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.toggle-button {
+  background-color: #444;
   color: white;
   padding: 10px 20px;
   border: none;

@@ -1,55 +1,26 @@
 <template>
   <div class="catalog">
-    <header class="header">
-      <div class="logo">Old Mans Wheel</div>
-    </header>
-    
     <div class="search-bar">
-      <input type="text" v-model="searchQuery" placeholder="ДЕТАЛЬ" />
-      <select v-model="selectedTag" @change="filterByTag">
-        <option value="">Всі теги</option>
-        <option v-for="tag in uniqueTags" :key="tag" :value="tag">{{ tag }}</option>
+      <input type="text" v-model="searchQuery" placeholder="Search for parts..." />
+      <select v-model="selectedCategory">
+        <option value="">All Categories</option>
+        <option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option>
       </select>
+      <button @click="search">Search</button>
     </div>
-
-    <main class="catalog-grid">
-      <div v-for="item in filteredItems" :key="item.id" class="catalog-item" @click="showDetails(item)">
-        <div class="image">Картинка</div>
-        <div class="title">{{ item.name }}</div>
-        <button @click.stop="addToCart(item)">Додати до кошика</button>
+    <div class="content">
+      <div class="catalog-grid">
+        <div v-for="product in filteredProducts" :key="product.id" class="catalog-item">
+          <div class="image">
+            <img :src="product.image" alt="Product Image" />
+          </div>
+          <div class="title">{{ product.name }}</div>
+          <div class="item-details">
+            <div class="price">{{ product.price }} USD</div>
+            <button @click="addToCart(product.id)">Add to Cart</button>
+          </div>
+        </div>
       </div>
-    </main>
-
-    <div v-if="selectedItem" class="item-details">
-      <h2>{{ selectedItem.name }}</h2>
-      <p>Ціна: {{ selectedItem.price }}</p>
-      <p>Опис: {{ selectedItem.description }}</p>
-      <button @click="closeDetails">Закрити</button>
-    </div>
-
-    <footer class="footer">
-      <div class="cart-icon" @click="toggleCart">🛒</div>
-    </footer>
-
-    <div v-if="showCart" class="cart">
-      <h2>Кошик</h2>
-      <div v-for="item in cart" :key="item.id" class="cart-item">
-        <div>{{ item.name }}</div>
-        <div>{{ item.price }}</div>
-        <div>Кількість: {{ item.quantity }}</div>
-      </div>
-      <div class="total">
-        <p>Загальна сума: {{ totalPrice }}</p>
-      </div>
-      <div class="payment-method">
-        <label for="payment">Спосіб оплати:</label>
-        <select id="payment" v-model="paymentMethod">
-          <option value="credit-card">Кредитна картка</option>
-          <option value="paypal">PayPal</option>
-          <option value="cash">Готівка</option>
-        </select>
-      </div>
-      <button @click="checkout">Оформити замовлення</button>
     </div>
   </div>
 </template>
@@ -58,70 +29,76 @@
 export default {
   data() {
     return {
+      products: [],
+      categories: [],
       searchQuery: '',
-      selectedTag: '',
-      selectedItem: null,
-      showCart: false,
-      paymentMethod: 'credit-card',
-      cart: [],
-      items: [
-        { id: 1, name: 'Назва 1', price: '100 грн', description: 'Опис 1', tags: ['tag1', 'tag2'] },
-        { id: 2, name: 'Назва 2', price: '200 грн', description: 'Опис 2', tags: ['tag2', 'tag3'] },
-        { id: 3, name: 'Назва 3', price: '300 грн', description: 'Опис 3', tags: ['tag1'] },
-        { id: 4, name: 'Назва 4', price: '400 грн', description: 'Опис 4', tags: ['tag3'] },
-        { id: 5, name: 'Назва 5', price: '500 грн', description: 'Опис 5', tags: ['tag2'] },
-        { id: 6, name: 'Назва 6', price: '600 грн', description: 'Опис 6', tags: ['tag1', 'tag3'] },
-        { id: 7, name: 'Назва 7', price: '700 грн', description: 'Опис 7', tags: ['tag2'] },
-        { id: 8, name: 'Назва 8', price: '800 грн', description: 'Опис 8', tags: ['tag1'] },
-      ],
+      selectedCategory: '',
     };
   },
   computed: {
-    filteredItems() {
-      let items = this.items.filter(item =>
-        item.name.toLowerCase().includes(this.searchQuery.toLowerCase())
-      );
-      if (this.selectedTag) {
-        items = items.filter(item => item.tags.includes(this.selectedTag));
-      }
-      return items;
-    },
-    uniqueTags() {
-      const tags = new Set();
-      this.items.forEach(item => {
-        item.tags.forEach(tag => tags.add(tag));
+    filteredProducts() {
+      return this.products.filter(product => {
+        return (
+          (this.selectedCategory === '' || product.category_id === this.selectedCategory) &&
+          (this.searchQuery === '' || product.name.toLowerCase().includes(this.searchQuery.toLowerCase()))
+        );
       });
-      return Array.from(tags);
-    },
-    totalPrice() {
-      return this.cart.reduce((total, item) => total + parseFloat(item.price) * item.quantity, 0) + ' грн';
     },
   },
-  methods: {
-    filterByTag() {
-      console.log('Filtering by tag:', this.selectedTag);
-    },
-    showDetails(item) {
-      this.selectedItem = item;
-    },
-    closeDetails() {
-      this.selectedItem = null;
-    },
-    addToCart(item) {
-      const cartItem = this.cart.find(cartItem => cartItem.id === item.id);
-      if (cartItem) {
-        cartItem.quantity++;
+  async created() {
+    try {
+      const productsResponse = await fetch('http://localhost:8080/api/products');
+      const productsData = await productsResponse.json();
+      if (productsResponse.ok) {
+        this.products = productsData;
       } else {
-        this.cart.push({ ...item, quantity: 1 });
+        alert(productsData.message);
+      }
+
+      const categoriesResponse = await fetch('http://localhost:8080/api/categories');
+      const categoriesData = await categoriesResponse.json();
+      if (categoriesResponse.ok) {
+        this.categories = categoriesData;
+      } else {
+        alert(categoriesData.message);
+      }
+    } catch (err) {
+      console.error('Error fetching data:', err);
+    }
+  },
+  methods: {
+    goToPage(page) {
+      this.$router.push(`/${page}`);
+    },
+    async addToCart(productId) {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          alert('Please log in to add items to the cart.');
+          this.$router.push('/login');
+          return;
+        }
+
+        const response = await fetch('http://localhost:8080/api/cart', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ product_id: productId, quantity: 1 }),
+        });
+        const data = await response.json();
+        if (response.ok) {
+          alert('Product added to cart');
+        } else {
+          alert(data.message);
+        }
+      } catch (err) {
+        console.error('Error adding to cart:', err);
       }
     },
-    toggleCart() {
-      this.showCart = !this.showCart;
-    },
-    checkout() {
-      alert(`Замовлення оформлено! Спосіб оплати: ${this.paymentMethod}`);
-      this.cart = [];
-      this.showCart = false;
+    search() {
+      // This method is intentionally left empty as the filtering is handled by the computed property
     },
   },
 };
@@ -129,137 +106,95 @@ export default {
 
 <style scoped>
 .catalog {
-  font-family: Arial, sans-serif;
-  color: #fff;
-  background-color: #222;
-  padding: 10px;
-}
-
-.header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.logo {
-  font-size: 20px;
-  font-weight: bold;
+  flex-direction: column;
+  min-height: 100vh;
+  background: url('@/assets/background.jpg') no-repeat center center;
+  background-size: cover;
 }
 
 .nav button {
-  margin: 0 5px;
+  margin-left: 1rem;
+  padding: 0.5rem 1rem;
   background-color: #444;
-  color: #fff;
+  color: white;
   border: none;
-  padding: 5px 10px;
   cursor: pointer;
 }
 
 .nav button:hover {
-  background-color: #666;
+  background-color: #555;
 }
 
 .search-bar {
   display: flex;
   justify-content: center;
-  margin: 20px 0;
+  padding: 1rem;
+  background-color: #f4f4f4;
 }
 
-.search-bar input {
-  padding: 5px;
-  width: 200px;
-  margin-right: 10px;
-}
-
+.search-bar input,
 .search-bar select {
-  padding: 5px;
-  width: 150px;
+  margin-right: 1rem;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.content {
+  flex: 1;
+  padding: 2rem;
 }
 
 .catalog-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
 }
 
 .catalog-item {
-  background-color: #333;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 1rem;
   text-align: center;
-  padding: 10px;
-  border-radius: 5px;
-  cursor: pointer;
+  transition: transform 0.2s;
 }
 
 .catalog-item:hover {
-  background-color: #555;
+  transform: scale(1.05);
 }
 
-.image {
-  background-color: #555;
-  height: 100px;
-  margin-bottom: 10px;
+.image img {
+  max-width: 100%;
+  height: auto;
 }
 
 .title {
-  font-size: 14px;
+  font-size: 1.2rem;
+  margin: 0.5rem 0;
 }
 
 .item-details {
-  background-color: #444;
-  padding: 20px;
-  border-radius: 10px;
-  margin-top: 20px;
-  color: #fff;
-}
-
-.footer {
-  display: flex;
-  justify-content: flex-end;
-  padding: 10px;
-}
-
-.cart-icon {
-  font-size: 20px;
-  cursor: pointer;
-}
-
-.cart {
-  background-color: #333;
-  padding: 20px;
-  border-radius: 10px;
-  position: fixed;
-  top: 50px;
-  right: 20px;
-  width: 300px;
-  max-height: 80vh;
-  overflow-y: auto;
-}
-
-.cart-item {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 10px;
+  align-items: center;
 }
 
-.total {
-  margin-top: 20px;
-  font-weight: bold;
-}
-
-.payment-method {
-  margin-top: 20px;
+.price {
+  font-size: 1rem;
+  color: #333;
 }
 
 button {
-  background-color: #444;
-  color: #fff;
+  padding: 0.5rem 1rem;
+  background-color: #333;
+  color: white;
   border: none;
-  padding: 10px;
   cursor: pointer;
-  border-radius: 5px;
 }
 
 button:hover {
-  background-color: #666;
+  background-color: #555;
 }
 </style>

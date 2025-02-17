@@ -5,28 +5,11 @@
       <div class="avatar">
         <img src="@/assets/User.png" alt="Аватар" class="avatar-img" />
       </div>
-      <div class="username">нікнейм</div>
+      <div class="username">{{ user.username }}</div>
     </div>
 
     <!-- Головний контент: Кошик та Історія -->
     <div class="main-content">
-      <!-- Кошик -->
-      <div class="basket">
-        <h2>кошик</h2>
-        <div v-for="item in basketItems" :key="item.id" class="item">
-          <img src="@/assets/image/vtulka.jpg" alt="картинка" class="item-image" />
-          <div class="item-details">
-            <span class="item-name">{{ item.name }}</span>
-            <span class="item-price">{{ item.price }}</span>
-            <div class="quantity-control">
-              <button @click="decreaseQuantity(item.id)">-</button>
-              <input type="number" v-model="item.quantity" min="1" />
-              <button @click="increaseQuantity(item.id)">+</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Історія -->
       <div class="history">
         <h2>історія</h2>
@@ -44,9 +27,9 @@
     <!-- Особисті дані -->
     <div class="personal-data">
       <h3>особисті дані</h3>
-      <p>контакти: +380991111111</p>
-      <p>адреса доставки: ебенград дім 4</p>
-      <p>пошта: EBENGRAT@gmail.com</p>
+      <p>контакти: {{ user.phone }}</p>
+      <p>адреса доставки: {{ user.address }}</p>
+      <p>пошта: {{ user.email }}</p>
       <button @click="editProfile">редагувати</button>
     </div>
 
@@ -59,37 +42,59 @@
 export default {
   data() {
     return {
-      basketItems: [
-        { id: 1, name: "Товар 1", price: "11200 грн", quantity: 1 },
-        { id: 2, name: "Товар 2", price: "21500 грн", quantity: 1 },
-      ],
-      historyItems: [
-        { id: 1, name: "Товар 1", price: "11200 грн", quantity: 1 },
-        { id: 2, name: "Товар 2", price: "21500 грн", quantity: 1 },
-      ],
+      user: {},
+      historyItems: [],
     };
   },
+  async created() {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const response = await fetch('http://localhost:8080/api/user', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await response.json();
+        if (response.ok) {
+          this.user = data;
+          this.fetchHistory();
+        } else {
+          alert(data.message);
+        }
+      } else {
+        // Якщо токен відсутній, завантажити історію без користувача
+        this.fetchHistory();
+      }
+    } catch (err) {
+      console.error('Error fetching user data:', err);
+    }
+  },
   methods: {
-    increaseQuantity(id) {
-      const item = this.basketItems.find(item => item.id === id);
-      if (item) item.quantity++;
-    },
-    decreaseQuantity(id) {
-      const item = this.basketItems.find(item => item.id === id);
-      if (item && item.quantity > 1) item.quantity--;
+    async fetchHistory() {
+      try {
+        const response = await fetch('http://localhost:8080/api/cart/1'); // Використовуйте ID користувача за замовчуванням або інший спосіб отримання даних
+        const data = await response.json();
+        if (response.ok) {
+          this.historyItems = data;
+        } else {
+          alert(data.message);
+        }
+      } catch (err) {
+        console.error('Error fetching history:', err);
+      }
     },
     editProfile() {
       // Логіка редагування профілю
     },
     logout() {
-      // Логіка виходу з системи
+      localStorage.removeItem('token');
+      this.$router.push('/login');
     },
   },
 };
 </script>
 
-
-  
 <style scoped>
 /* Стиль для всієї сторінки */
 .user-page {
