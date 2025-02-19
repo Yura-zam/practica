@@ -18,18 +18,6 @@
           placeholder="Повне ім'я"
           v-if="isRegistering"
         />
-        <input
-          type="text"
-          v-model="phone"
-          placeholder="Телефон"
-          v-if="isRegistering"
-        />
-        <input
-          type="text"
-          v-model="address"
-          placeholder="Адреса"
-          v-if="isRegistering"
-        />
         <div class="button-group">
           <button @click="login" class="login-button" v-if="!isRegistering">
             Вхід
@@ -54,12 +42,20 @@ export default {
       email: '',
       password: '',
       fullName: '',
-      phone: '',
-      address: '',
       isRegistering: false,
     };
   },
   methods: {
+    validateEmail(email) {
+      const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return re.test(String(email).toLowerCase());
+    },
+    validatePassword(password) {
+      return password.length >= 6;
+    },
+    validateUsername(username) {
+      return username.length >= 3;
+    },
     async login() {
       try {
         const response = await fetch('http://localhost:8080/api/login', {
@@ -81,6 +77,18 @@ export default {
       }
     },
     async register() {
+      if (!this.validateEmail(this.email)) {
+        alert('Невірний формат електронної пошти');
+        return;
+      }
+      if (!this.validatePassword(this.password)) {
+        alert('Пароль повинен містити мінімум 6 символів');
+        return;
+      }
+      if (!this.validateUsername(this.name)) {
+        alert('Нікнейм повинен містити мінімум 3 символи');
+        return;
+      }
       try {
         const response = await fetch('http://localhost:8080/api/register', {
           method: 'POST',
@@ -92,8 +100,6 @@ export default {
             email: this.email,
             password: this.password,
             full_name: this.fullName,
-            phone: this.phone,
-            address: this.address,
           }),
         });
         const data = await response.json();

@@ -4,20 +4,23 @@ const bcrypt = require('bcryptjs');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const path = require('path');
 
 const app = express();
-const port = 8080;
+const port = 8081;
 const secretKey = '20252025';
 
 app.use(bodyParser.json());
 app.use(cors());
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Підключення до бази даних
 const db = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: 'Zamyra_18',
-  database: 'auto_parts_store'
+  host:  'localhost',
+  user:  'root',
+  password:  'Zamyra_18',
+  database:  'auto_parts_store'
 });
 
 db.connect((err) => {
@@ -26,6 +29,56 @@ db.connect((err) => {
     return;
   }
   console.log('Підключено до бази даних MySQL');
+});
+
+// Налаштування multer для обробки завантаження файлів
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+
+// Завантаження фото профілю
+app.post('/api/user/profile_image', upload.single('image'), (req, res) => {
+  const token = req.headers.authorization.split(' ')[1];
+  jwt.verify(token, secretKey, (err, decoded) => {
+    if (err) {
+      res.status(401).json({ message: 'Невірний токен' });
+      return;
+    }
+    const imageBuffer = req.file.buffer;
+    const query = 'UPDATE users SET profile_image = ? WHERE id = ?';
+    db.query(query, [imageBuffer, decoded.id], (err, results) => {
+      if (err) {
+        console.error('Помилка при завантаженні фото профілю:', err);
+        res.status(500).json({ message: 'Помилка при завантаженні фото профілю' });
+        return;
+      }
+      res.status(200).json({ message: 'Фото профілю успішно завантажено' });
+    });
+  });
+});
+
+// Отримання фото профілю
+app.get('/api/user/profile_image', (req, res) => {
+  const token = req.headers.authorization.split(' ')[1];
+  jwt.verify(token, secretKey, (err, decoded) => {
+    if (err) {
+      res.status(401).json({ message: 'Невірний токен' });
+      return;
+    }
+    const query = 'SELECT profile_image FROM users WHERE id = ?';
+    db.query(query, [decoded.id], (err, results) => {
+      if (err) {
+        console.error('Помилка при отриманні фото профілю:', err);
+        res.status(500).json({ message: 'Помилка при отриманні фото профілю' });
+        return;
+      }
+      if (results.length === 0 || !results[0].profile_image) {
+        res.status(404).json({ message: 'Фото профілю не знайдено' });
+        return;
+      }
+      res.set('Content-Type', 'image/jpeg');
+      res.send(results[0].profile_image);
+    });
+  });
 });
 
 // Реєстрація користувача
@@ -91,17 +144,29 @@ app.get('/api/user', (req, res) => {
     });
   });
 });
+
 // Додавання нового продукту
 app.post('/api/products', (req, res) => {
-  const { name, description, price, image, category_id, manufacturer_id } = req.body;
-  const query = 'INSERT INTO products (name, description, price, image, category_id, manufacturer_id) VALUES (?, ?, ?, ?, ?, ?)';
-  db.query(query, [name, description, price, image, category_id, manufacturer_id], (err, results) => {
+  const token = req.headers.authorization.split(' ')[1];
+  jwt.verify(token, secretKey, (err, decoded) => {
     if (err) {
-      console.error('Помилка при додаванні продукту:', err);
-      res.status(500).json({ message: 'Помилка при додаванні продукту' });
+      res.status(401).json({ message: 'Невірний токен' });
       return;
     }
-    res.status(200).json({ message: 'Продукт успішно додано' });
+    if (decoded.role !== 'manager' && decoded.role !== 'admin') {
+      res.status(403).json({ message: 'Недостатньо прав для додавання продукту' });
+      return;
+    }
+    const { name, description, price, image, category_id, manufacturer_id } = req.body;
+    const query = 'INSERT INTO products (name, description, price, image, category_id, manufacturer_id) VALUES (?, ?, ?, ?, ?, ?)';
+    db.query(query, [name, description, price, image, category_id, manufacturer_id], (err, results) => {
+      if (err) {
+        console.error('Помилка при додаванні продукту:', err);
+        res.status(500).json({ message: 'Помилка при додаванні продукту' });
+        return;
+      }
+      res.status(200).json({ message: 'Продукт успішно додано' });
+    });
   });
 });
 
@@ -144,36 +209,64 @@ app.get('/api/products', (req, res) => {
   });
 });
 
-// Додавання продукту до кошика
-app.post('/api/cart', (req, res) => {
-  const { user_id, product_id, quantity } = req.body;
-  const query = 'INSERT INTO cart (user_id, product_id, quantity) VALUES (?, ?, ?)';
-  db.query(query, [user_id, product_id, quantity], (err, results) => {
+// Маршрут для додавання товару до кошика
+app.post('/api/carts', (req, res) => {
+  const token = req.headers.authorization.split(' ')[1];
+  jwt.verify(token, secretKey, (err, decoded) => {
     if (err) {
-      console.error('Помилка при додаванні до кошика:', err);
-      res.status(500).json({ message: 'Помилка при додаванні до кошика' });
+      res.status(401).json({ message: 'Невірний токен' });
       return;
     }
-    res.status(200).json({ message: 'Продукт додано до кошика' });
+    const { product_id, quantity } = req.body;
+    const query = 'INSERT INTO carts (user_id, product_id, quantity) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE quantity = quantity + ?';
+    db.query(query, [decoded.id, product_id, quantity, quantity], (err, results) => {
+      if (err) {
+        console.error('Помилка при додаванні товару до кошика:', err);
+        res.status(500).json({ message: 'Помилка при додаванні товару до кошика' });
+        return;
+      }
+      res.status(200).json({ message: 'Товар успішно додано до кошика' });
+    });
   });
 });
 
-// Отримання продуктів з кошика
-app.get('/api/cart/:user_id', (req, res) => {
-  const { user_id } = req.params;
-  const query = `
-    SELECT products.id, products.name, products.price, cart.quantity
-    FROM cart
-    JOIN products ON cart.product_id = products.id
-    WHERE cart.user_id = ?
-  `;
-  db.query(query, [user_id], (err, results) => {
+// Маршрут для отримання товарів з кошика
+app.get('/api/carts', (req, res) => {
+  const token = req.headers.authorization.split(' ')[1];
+  jwt.verify(token, secretKey, (err, decoded) => {
     if (err) {
-      console.error('Помилка при отриманні кошика:', err);
-      res.status(500).json({ message: 'Помилка при отриманні кошика' });
+      res.status(401).json({ message: 'Невірний токен' });
       return;
     }
-    res.json(results);
+    const query = 'SELECT carts.id, products.name, products.price, carts.quantity FROM carts JOIN products ON carts.product_id = products.id WHERE carts.user_id = ?';
+    db.query(query, [decoded.id], (err, results) => {
+      if (err) {
+        console.error('Помилка при отриманні товарів з кошика:', err);
+        res.status(500).json({ message: 'Помилка при отриманні товарів з кошика' });
+        return;
+      }
+      res.json(results);
+    });
+  });
+});
+
+// Маршрут для отримання історії покупок
+app.get('/api/purchase-history', (req, res) => {
+  const token = req.headers.authorization.split(' ')[1];
+  jwt.verify(token, secretKey, (err, decoded) => {
+    if (err) {
+      res.status(401).json({ message: 'Невірний токен' });
+      return;
+    }
+    const query = 'SELECT orders.id, products.name, products.price, order_items.quantity, orders.created_at FROM orders JOIN order_items ON orders.id = order_items.order_id JOIN products ON order_items.product_id = products.id WHERE orders.user_id = ? ORDER BY orders.created_at DESC';
+    db.query(query, [decoded.id], (err, results) => {
+      if (err) {
+        console.error('Помилка при отриманні історії покупок:', err);
+        res.status(500).json({ message: 'Помилка при отриманні історії покупок' });
+        return;
+      }
+      res.json(results);
+    });
   });
 });
 

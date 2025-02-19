@@ -1,40 +1,32 @@
 <template>
   <div class="user-page">
-    <!-- Заголовок профілю -->
     <div class="profile-header">
       <div class="avatar">
-        <img src="@/assets/User.png" alt="Аватар" class="avatar-img" />
+        <img :src="profileImageUrl" alt="Аватар" class="avatar-img" />
+        <input type="file" @change="onFileChange" />
       </div>
       <div class="username">{{ user.username }}</div>
+      <button @click="toggleEditMenu" class="edit-account-button">Редагувати акаунт</button>
     </div>
-
-    <!-- Головний контент: Кошик та Історія -->
+    <div v-if="showEditMenu" class="edit-menu">
+      <button @click="editProfile">Редагувати профіль</button>
+      <button @click="changePassword">Змінити пароль</button>
+      <button @click="deleteAccount">Видалити акаунт</button>
+    </div>
     <div class="main-content">
-      <!-- Історія -->
       <div class="history">
-        <h2>історія</h2>
-        <div v-for="item in historyItems" :key="item.id" class="item">
-          <img src="@/assets/image/vtulka.jpg" alt="картинка" class="item-image" />
+        <h2>Історія покупок</h2>
+        <div v-for="item in purchaseHistory" :key="item.id" class="item">
           <div class="item-details">
             <span class="item-name">{{ item.name }}</span>
-            <span class="item-price">{{ item.price }}</span>
+            <span class="item-price">{{ item.price }} USD</span>
             <span class="item-quantity">Кількість: {{ item.quantity }}</span>
+            <span class="item-date">Дата: {{ new Date(item.created_at).toLocaleDateString() }}</span>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- Особисті дані -->
-    <div class="personal-data">
-      <h3>особисті дані</h3>
-      <p>контакти: {{ user.phone }}</p>
-      <p>адреса доставки: {{ user.address }}</p>
-      <p>пошта: {{ user.email }}</p>
-      <button @click="editProfile">редагувати</button>
-    </div>
-
-    <!-- Вихід -->
-    <button @click="logout" class="logout">вихід</button>
+    <button @click="logout" class="logout">Вихід</button>
   </div>
 </template>
 
@@ -43,49 +35,124 @@ export default {
   data() {
     return {
       user: {},
-      historyItems: [],
+      purchaseHistory: [],
+      profileImageUrl: '',
+      showEditMenu: false,
     };
   },
   async created() {
-    try {
-      const token = localStorage.getItem('token');
-      if (token) {
-        const response = await fetch('http://localhost:8080/api/user', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await response.json();
-        if (response.ok) {
-          this.user = data;
-          this.fetchHistory();
-        } else {
-          alert(data.message);
-        }
+    const token = localStorage.getItem('token');
+    if (token) {
+      const response = await fetch('http://localhost:8080/api/user', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        this.user = data;
+        this.fetchPurchaseHistory();
+        this.fetchProfileImage();
       } else {
-        // Якщо токен відсутній, завантажити історію без користувача
-        this.fetchHistory();
+        alert(data.message);
       }
-    } catch (err) {
-      console.error('Error fetching user data:', err);
+    } else {
+      this.fetchPurchaseHistory();
     }
   },
   methods: {
-    async fetchHistory() {
-      try {
-        const response = await fetch('http://localhost:8080/api/cart/1'); // Використовуйте ID користувача за замовчуванням або інший спосіб отримання даних
+    async fetchPurchaseHistory() {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:8080/api/purchase-history', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (response.ok) this.purchaseHistory = data;
+      else alert(data.message);
+    },
+    async fetchProfileImage() {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:8080/api/user/profile_image', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const blob = await response.blob();
+        this.profileImageUrl = URL.createObjectURL(blob);
+      } else {
+        this.profileImageUrl = require('@/assets/User.png');
+      }
+    },
+    onFileChange(event) {
+      const file = event.target.files[0];
+      if (file) this.uploadImage(file);
+    },
+    async uploadImage(file) {
+      const formData = new FormData();
+      formData.append('image', file);
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:8080/api/user/profile_image', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await response.json();
+      if (response.ok) this.fetchProfileImage();
+      else alert(data.message);
+    },
+    toggleEditMenu() {
+      this.showEditMenu = !this.showEditMenu;
+    },
+    async editProfile() {
+      const newUsername = prompt('Введіть нове ім\'я користувача:', this.user.username);
+      if (newUsername && newUsername !== this.user.username) {
+        const token = localStorage.getItem('token');
+        const response = await fetch('http://localhost:8080/api/user', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ username: newUsername }),
+        });
         const data = await response.json();
         if (response.ok) {
-          this.historyItems = data;
+          this.user.username = newUsername;
+          alert('Ім\'я користувача успішно змінено');
         } else {
           alert(data.message);
         }
-      } catch (err) {
-        console.error('Error fetching history:', err);
       }
     },
-    editProfile() {
-      // Логіка редагування профілю
+    async changePassword() {
+      const newPassword = prompt('Введіть новий пароль:');
+      if (newPassword) {
+        const token = localStorage.getItem('token');
+        const response = await fetch('http://localhost:8080/api/user/password', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ password: newPassword }),
+        });
+        const data = await response.json();
+        if (response.ok) alert('Пароль успішно змінено');
+        else alert(data.message);
+      }
+    },
+    async deleteAccount() {
+      if (confirm('Ви впевнені, що хочете видалити акаунт?')) {
+        const token = localStorage.getItem('token');
+        const response = await fetch('http://localhost:8080/api/user', {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json();
+        if (response.ok) {
+          alert('Акаунт успішно видалено');
+          this.logout();
+        } else {
+          alert(data.message);
+        }
+      }
     },
     logout() {
       localStorage.removeItem('token');
@@ -96,26 +163,23 @@ export default {
 </script>
 
 <style scoped>
-/* Стиль для всієї сторінки */
 .user-page {
   position: relative;
   min-height: 100vh;
   font-family: Arial, sans-serif;
-  background-image: url('@/assets/background.jpg'); /* Додати фонове зображення */
+  background-image: url('@/assets/background.jpg');
   background-size: cover;
   background-position: center;
-  padding-bottom: 50px; /* Простір для футера */
+  padding-bottom: 50px;
 }
 
-/* Білий блок за текстом */
-.main-content, .personal-data, .profile-header {
+.main-content, .profile-header {
   background-color: rgba(255, 255, 255, 0.9);
   padding: 20px;
   border-radius: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* Заголовок профілю */
 .profile-header {
   display: flex;
   align-items: center;
@@ -128,23 +192,66 @@ export default {
   border-radius: 50%;
 }
 
+.avatar input[type="file"] {
+  display: block;
+  margin-top: 10px;
+}
+
 .username {
   font-size: 24px;
   margin-left: 10px;
 }
 
-/* Основний контент: кошик і історія */
+.edit-account-button {
+  margin-left: auto;
+  background-color: #007bff;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.edit-account-button:hover {
+  background-color: #0056b3;
+}
+
+.edit-menu {
+  position: absolute;
+  top: 70px;
+  right: 20px;
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+.edit-menu button {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  border: none;
+  background-color: white;
+  cursor: pointer;
+  text-align: left;
+}
+
+.edit-menu button:hover {
+  background-color: #f4f4f4;
+}
+
 .main-content {
   display: flex;
   justify-content: space-between;
   margin-bottom: 20px;
 }
 
-.basket, .history {
-  width: 48%;
+.history {
+  width: 100%;
 }
 
-.basket h2, .history h2 {
+.history h2 {
   font-size: 18px;
   text-align: center;
   margin-bottom: 10px;
@@ -154,12 +261,6 @@ export default {
   display: flex;
   align-items: center;
   margin-bottom: 10px;
-}
-
-.item img {
-  width: 50px;
-  height: 50px;
-  margin-right: 10px;
 }
 
 .item-details {
@@ -174,27 +275,12 @@ export default {
   margin-top: 5px;
 }
 
-.quantity-control {
-  display: flex;
-  align-items: center;
-  margin-top: 10px;
+.item-quantity {
+  margin-top: 5px;
 }
 
-.quantity-control button {
-  margin: 0 5px;
-}
-
-.personal-data {
-  margin-top: 20px;
-}
-
-.personal-data h3 {
-  font-size: 18px;
-  margin-bottom: 10px;
-}
-
-.personal-data p {
-  margin: 5px 0;
+.item-date {
+  margin-top: 5px;
 }
 
 .logout {
@@ -204,5 +290,9 @@ export default {
   border: none;
   cursor: pointer;
   margin-top: 10px;
+}
+
+button:hover {
+  opacity: 0.9;
 }
 </style>

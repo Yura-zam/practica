@@ -1,12 +1,15 @@
 <template>
   <div class="catalog">
-    <div class="search-bar">
-      <input type="text" v-model="searchQuery" placeholder="Search for parts..." />
-      <select v-model="selectedCategory">
-        <option value="">All Categories</option>
-        <option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option>
-      </select>
-      <button @click="search">Search</button>
+    <div class="nav">
+      <div class="search-bar">
+        <input type="text" v-model="searchQuery" placeholder="Search for parts..." />
+        <select v-model="selectedCategory">
+          <option value="">All Categories</option>
+          <option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option>
+        </select>
+        <button @click="search">Search</button>
+      </div>
+      <button @click="toggleCart">Кошик</button>
     </div>
     <div class="content">
       <div class="catalog-grid">
@@ -17,8 +20,52 @@
           <div class="title">{{ product.name }}</div>
           <div class="item-details">
             <div class="price">{{ product.price }} USD</div>
-            <button @click="addToCart(product.id)">Add to Cart</button>
+            <button @click.stop="addToCart(product)">Add to Cart</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модальне вікно для відображення деталей продукту -->
+    <div v-if="selectedProduct" class="modal" @click.self="closeModal">
+      <div class="modal-content">
+        <span class="close" @click="closeModal">&times;</span>
+        <h2>{{ selectedProduct.name }}</h2>
+        <img :src="selectedProduct.image" alt="Product Image" />
+        <p>{{ selectedProduct.description }}</p>
+        <div class="price">{{ selectedProduct.price }} USD</div>
+        <button @click="addToCart(selectedProduct)">Add to Cart</button>
+      </div>
+    </div>
+
+    <!-- Модальне вікно для відображення кошика -->
+    <div v-if="showCart" class="modal" @click.self="toggleCart">
+      <div class="modal-content">
+        <span class="close" @click="toggleCart">&times;</span>
+        <h2>Ваш кошик</h2>
+        <div v-if="cartItems.length === 0">Ваш кошик порожній</div>
+        <div v-else>
+          <div v-for="item in cartItems" :key="item.id" class="cart-item">
+            <div class="item-details">
+              <span class="item-name">{{ item.name }}</span>
+              <span class="item-price">{{ item.price }} USD</span>
+              <span class="item-quantity">Кількість: {{ item.quantity }}</span>
+            </div>
+          </div>
+          <div class="total">
+            Всього: {{ total }} USD
+          </div>
+          <form @submit.prevent="checkout">
+            <div class="payment-method">
+              <label for="payment-method">Спосіб оплати:</label>
+              <select v-model="paymentMethod" id="payment-method" required>
+                <option value="credit-card">Кредитна картка</option>
+                <option value="paypal">PayPal</option>
+                <option value="bank-transfer">Банківський переказ</option>
+              </select>
+            </div>
+            <button type="submit">Оформити замовлення</button>
+          </form>
         </div>
       </div>
     </div>
@@ -33,6 +80,10 @@ export default {
       categories: [],
       searchQuery: '',
       selectedCategory: '',
+      selectedProduct: null,
+      showCart: false,
+      cartItems: [],
+      paymentMethod: 'credit-card',
     };
   },
   computed: {
@@ -43,6 +94,9 @@ export default {
           (this.searchQuery === '' || product.name.toLowerCase().includes(this.searchQuery.toLowerCase()))
         );
       });
+    },
+    total() {
+      return this.cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
     },
   },
   async created() {
@@ -62,15 +116,14 @@ export default {
       } else {
         alert(categoriesData.message);
       }
+
+      this.fetchCartItems();
     } catch (err) {
       console.error('Error fetching data:', err);
     }
   },
   methods: {
-    goToPage(page) {
-      this.$router.push(`/${page}`);
-    },
-    async addToCart(productId) {
+    async addToCart(product) {
       try {
         const token = localStorage.getItem('token');
         if (!token) {
@@ -79,17 +132,18 @@ export default {
           return;
         }
 
-        const response = await fetch('http://localhost:8080/api/cart', {
+        const response = await fetch('http://localhost:8080/api/carts', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ product_id: productId, quantity: 1 }),
+          body: JSON.stringify({ product_id: product.id, quantity: 1 }),
         });
         const data = await response.json();
         if (response.ok) {
           alert('Product added to cart');
+          this.fetchCartItems();
         } else {
           alert(data.message);
         }
@@ -97,8 +151,39 @@ export default {
         console.error('Error adding to cart:', err);
       }
     },
+    async fetchCartItems() {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          return;
+        }
+
+        const response = await fetch('http://localhost:8080/api/carts', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await response.json();
+        if (response.ok) {
+          this.cartItems = data;
+        } else {
+          alert(data.message);
+        }
+      } catch (err) {
+        console.error('Error fetching cart items:', err);
+      }
+    },
+    async checkout() {
+      alert('Checkout functionality is not implemented yet.');
+    },
+    closeModal() {
+      this.selectedProduct = null;
+    },
+    toggleCart() {
+      this.showCart = !this.showCart;
+    },
     search() {
-      // This method is intentionally left empty as the filtering is handled by the computed property
+      // Implement search functionality here
     },
   },
 };
@@ -113,8 +198,28 @@ export default {
   background-size: cover;
 }
 
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: #f4f4f4;
+}
+
+.nav .search-bar {
+  display: flex;
+  align-items: center;
+}
+
+.nav .search-bar input,
+.nav .search-bar select {
+  margin-right: 1rem;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
 .nav button {
-  margin-left: 1rem;
   padding: 0.5rem 1rem;
   background-color: #444;
   color: white;
@@ -124,21 +229,6 @@ export default {
 
 .nav button:hover {
   background-color: #555;
-}
-
-.search-bar {
-  display: flex;
-  justify-content: center;
-  padding: 1rem;
-  background-color: #f4f4f4;
-}
-
-.search-bar input,
-.search-bar select {
-  margin-right: 1rem;
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
 }
 
 .content {
@@ -159,6 +249,10 @@ export default {
   padding: 1rem;
   text-align: center;
   transition: transform 0.2s;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .catalog-item:hover {
@@ -179,6 +273,7 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-top: auto;
 }
 
 .price {
@@ -196,5 +291,69 @@ button {
 
 button:hover {
   background-color: #555;
+}
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 1rem;
+  border-radius: 8px;
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+}
+
+.modal-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+.close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.cart-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.total {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-top: 1rem;
+}
+
+.payment-method {
+  margin-top: 1rem;
+  text-align: left;
+}
+
+.payment-method label {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.payment-method select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
 </style>
