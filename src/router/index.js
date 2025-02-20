@@ -7,8 +7,8 @@ const routes = [
   { path: '/', redirect: '/catalog' },
   { path: '/catalog', name: 'CatalogPage', component: CatalogPage },
   { path: '/about', name: 'AboutPage', component: AboutPage },
-  { path: '/account',name: 'UserAccount', component: UserAccount },
   { path: '/login',name: 'LoginPage', component: LoginPage }, 
+  { path: '/account',name: 'UserAccount', component: UserAccount },
 ];
 
 const router = createRouter({

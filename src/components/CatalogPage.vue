@@ -25,20 +25,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Модальне вікно для відображення деталей продукту -->
-    <div v-if="selectedProduct" class="modal" @click.self="closeModal">
-      <div class="modal-content">
-        <span class="close" @click="closeModal">&times;</span>
-        <h2>{{ selectedProduct.name }}</h2>
-        <img :src="selectedProduct.image" alt="Product Image" />
-        <p>{{ selectedProduct.description }}</p>
-        <div class="price">{{ selectedProduct.price }} USD</div>
-        <button @click="addToCart(selectedProduct)">Add to Cart</button>
-      </div>
-    </div>
-
-    <!-- Модальне вікно для відображення кошика -->
     <div v-if="showCart" class="modal" @click.self="toggleCart">
       <div class="modal-content">
         <span class="close" @click="toggleCart">&times;</span>
@@ -55,17 +41,7 @@
           <div class="total">
             Всього: {{ total }} USD
           </div>
-          <form @submit.prevent="checkout">
-            <div class="payment-method">
-              <label for="payment-method">Спосіб оплати:</label>
-              <select v-model="paymentMethod" id="payment-method" required>
-                <option value="credit-card">Кредитна картка</option>
-                <option value="paypal">PayPal</option>
-                <option value="bank-transfer">Банківський переказ</option>
-              </select>
-            </div>
-            <button type="submit">Оформити замовлення</button>
-          </form>
+          <button @click="checkout">Оформити замовлення</button>
         </div>
       </div>
     </div>
@@ -80,10 +56,8 @@ export default {
       categories: [],
       searchQuery: '',
       selectedCategory: '',
-      selectedProduct: null,
       showCart: false,
       cartItems: [],
-      paymentMethod: 'credit-card',
     };
   },
   computed: {
@@ -103,19 +77,11 @@ export default {
     try {
       const productsResponse = await fetch('http://localhost:8080/api/products');
       const productsData = await productsResponse.json();
-      if (productsResponse.ok) {
-        this.products = productsData;
-      } else {
-        alert(productsData.message);
-      }
+      this.products = productsData;
 
       const categoriesResponse = await fetch('http://localhost:8080/api/categories');
       const categoriesData = await categoriesResponse.json();
-      if (categoriesResponse.ok) {
-        this.categories = categoriesData;
-      } else {
-        alert(categoriesData.message);
-      }
+      this.categories = categoriesData;
 
       this.fetchCartItems();
     } catch (err) {
@@ -173,17 +139,20 @@ export default {
         console.error('Error fetching cart items:', err);
       }
     },
-    async checkout() {
+    checkout() {
       alert('Checkout functionality is not implemented yet.');
-    },
-    closeModal() {
-      this.selectedProduct = null;
     },
     toggleCart() {
       this.showCart = !this.showCart;
     },
     search() {
-      // Implement search functionality here
+      // Реалізація пошуку
+      this.filteredProducts = this.products.filter(product => {
+        return (
+          (this.selectedCategory === '' || product.category_id === this.selectedCategory) &&
+          (this.searchQuery === '' || product.name.toLowerCase().includes(this.searchQuery.toLowerCase()))
+        );
+      });
     },
   },
 };
@@ -338,22 +307,5 @@ button:hover {
   font-size: 1.2rem;
   font-weight: bold;
   margin-top: 1rem;
-}
-
-.payment-method {
-  margin-top: 1rem;
-  text-align: left;
-}
-
-.payment-method label {
-  display: block;
-  margin-bottom: 0.5rem;
-}
-
-.payment-method select {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
 }
 </style>

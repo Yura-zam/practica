@@ -15,12 +15,11 @@ app.use(bodyParser.json());
 app.use(cors());
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Підключення до бази даних
 const db = mysql.createConnection({
-  host:  'localhost',
-  user:  'root',
-  password:  'Zamyra_18',
-  database:  'auto_parts_store'
+  host: 'localhost',
+  user: 'root',
+  password: 'Zamyra_18',
+  database: 'auto_parts_store'
 });
 
 db.connect((err) => {
@@ -31,11 +30,9 @@ db.connect((err) => {
   console.log('Підключено до бази даних MySQL');
 });
 
-// Налаштування multer для обробки завантаження файлів
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// Завантаження фото профілю
 app.post('/api/user/profile_image', upload.single('image'), (req, res) => {
   const token = req.headers.authorization.split(' ')[1];
   jwt.verify(token, secretKey, (err, decoded) => {
@@ -56,7 +53,6 @@ app.post('/api/user/profile_image', upload.single('image'), (req, res) => {
   });
 });
 
-// Отримання фото профілю
 app.get('/api/user/profile_image', (req, res) => {
   const token = req.headers.authorization.split(' ')[1];
   jwt.verify(token, secretKey, (err, decoded) => {
@@ -81,14 +77,9 @@ app.get('/api/user/profile_image', (req, res) => {
   });
 });
 
-// Реєстрація користувача
 app.post('/api/register', async (req, res) => {
   const { username, email, password, full_name, phone, address } = req.body;
-
-  // Хешування пароля
   const hashedPassword = await bcrypt.hash(password, 10);
-
-  // Вставка нового користувача в базу даних
   const query = 'INSERT INTO users (username, email, password_hash, full_name, phone, address) VALUES (?, ?, ?, ?, ?, ?)';
   db.query(query, [username, email, hashedPassword, full_name, phone, address], (err, results) => {
     if (err) {
@@ -100,7 +91,6 @@ app.post('/api/register', async (req, res) => {
   });
 });
 
-// Вхід користувача
 app.post('/api/login', (req, res) => {
   const { email, password } = req.body;
   const query = 'SELECT * FROM users WHERE email = ?';
@@ -125,7 +115,6 @@ app.post('/api/login', (req, res) => {
   });
 });
 
-// Отримання даних користувача
 app.get('/api/user', (req, res) => {
   const token = req.headers.authorization.split(' ')[1];
   jwt.verify(token, secretKey, (err, decoded) => {
@@ -145,7 +134,6 @@ app.get('/api/user', (req, res) => {
   });
 });
 
-// Додавання нового продукту
 app.post('/api/products', (req, res) => {
   const token = req.headers.authorization.split(' ')[1];
   jwt.verify(token, secretKey, (err, decoded) => {
@@ -170,7 +158,6 @@ app.post('/api/products', (req, res) => {
   });
 });
 
-// Отримання категорій
 app.get('/api/categories', (req, res) => {
   const query = 'SELECT * FROM categories';
   db.query(query, (err, results) => {
@@ -183,7 +170,6 @@ app.get('/api/categories', (req, res) => {
   });
 });
 
-// Отримання виробників
 app.get('/api/manufacturers', (req, res) => {
   const query = 'SELECT * FROM manufacturers';
   db.query(query, (err, results) => {
@@ -196,7 +182,6 @@ app.get('/api/manufacturers', (req, res) => {
   });
 });
 
-// Отримання продуктів
 app.get('/api/products', (req, res) => {
   const query = 'SELECT * FROM products';
   db.query(query, (err, results) => {
@@ -209,7 +194,6 @@ app.get('/api/products', (req, res) => {
   });
 });
 
-// Маршрут для додавання товару до кошика
 app.post('/api/carts', (req, res) => {
   const token = req.headers.authorization.split(' ')[1];
   jwt.verify(token, secretKey, (err, decoded) => {
@@ -230,7 +214,6 @@ app.post('/api/carts', (req, res) => {
   });
 });
 
-// Маршрут для отримання товарів з кошика
 app.get('/api/carts', (req, res) => {
   const token = req.headers.authorization.split(' ')[1];
   jwt.verify(token, secretKey, (err, decoded) => {
@@ -250,7 +233,6 @@ app.get('/api/carts', (req, res) => {
   });
 });
 
-// Маршрут для отримання історії покупок
 app.get('/api/purchase-history', (req, res) => {
   const token = req.headers.authorization.split(' ')[1];
   jwt.verify(token, secretKey, (err, decoded) => {
@@ -270,6 +252,6 @@ app.get('/api/purchase-history', (req, res) => {
   });
 });
 
-app.listen(port, () => {
+app.listen(port, '0.0.0.0', () => {
   console.log(`Сервер працює на порту ${port}`);
 });

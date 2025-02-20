@@ -4,30 +4,14 @@
     <div class="content-container">
       <div class="white-box">
         <h1>{{ isRegistering ? 'Реєстрація' : 'Вхід' }}</h1>
-        <input
-          type="text"
-          v-model="name"
-          placeholder="Ім'я"
-          v-if="isRegistering"
-        />
+        <input type="text" v-model="name" placeholder="Ім'я" v-if="isRegistering" />
         <input type="email" v-model="email" placeholder="Електронна пошта" />
         <input type="password" v-model="password" placeholder="Пароль" />
-        <input
-          type="text"
-          v-model="fullName"
-          placeholder="Повне ім'я"
-          v-if="isRegistering"
-        />
+        <input type="text" v-model="fullName" placeholder="Повне ім'я" v-if="isRegistering" />
         <div class="button-group">
-          <button @click="login" class="login-button" v-if="!isRegistering">
-            Вхід
-          </button>
-          <button @click="register" class="register-button" v-if="isRegistering">
-            Реєстрація
-          </button>
-          <button @click="toggleForm" class="toggle-button">
-            {{ isRegistering ? 'Вхід' : 'Реєстрація' }}
-          </button>
+          <button @click="login" v-if="!isRegistering">Вхід</button>
+          <button @click="register" v-if="isRegistering">Реєстрація</button>
+          <button @click="toggleForm">{{ isRegistering ? 'Вхід' : 'Реєстрація' }}</button>
         </div>
       </div>
     </div>
@@ -177,33 +161,8 @@ button {
   border-radius: 4px;
   cursor: pointer;
   font-size: 16px;
-}
-
-.login-button {
   background-color: red;
   color: white;
-  padding: 10px 20px;
-  border: none;
-  cursor: pointer;
-  margin-top: 10px;
-}
-
-.register-button {
-  background-color: red;
-  color: white;
-  padding: 10px 20px;
-  border: none;
-  cursor: pointer;
-  margin-top: 10px;
-}
-
-.toggle-button {
-  background-color: #444;
-  color: white;
-  padding: 10px 20px;
-  border: none;
-  cursor: pointer;
-  margin-top: 10px;
 }
 
 button:hover {
