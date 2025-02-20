@@ -13,9 +13,9 @@
     </div>
     <div class="content">
       <div class="catalog-grid">
-        <div v-for="product in filteredProducts" :key="product.id" class="catalog-item">
+        <div v-for="product in filteredProducts" :key="product.id" class="catalog-item" @click="showProductDetails(product)">
           <div class="image">
-            <img :src="product.image" alt="Product Image" />
+            <img :src="product.image_url" alt="Фото товару">
           </div>
           <div class="title">{{ product.name }}</div>
           <div class="item-details">
@@ -35,14 +35,32 @@
             <div class="item-details">
               <span class="item-name">{{ item.name }}</span>
               <span class="item-price">{{ item.price }} USD</span>
-              <span class="item-quantity">Кількість: {{ item.quantity }}</span>
+              <input type="number" v-model.number="item.quantity" min="1" @change="updateCartItem(item)" />
             </div>
           </div>
           <div class="total">
             Всього: {{ total }} USD
           </div>
+          <div class="payment-method">
+            <label for="payment-method">Спосіб оплати:</label>
+            <select v-model="paymentMethod" id="payment-method">
+              <option value="credit-card">Кредитна картка</option>
+              <option value="paypal">PayPal</option>
+              <option value="bank-transfer">Банківський переказ</option>
+            </select>
+          </div>
           <button @click="checkout">Оформити замовлення</button>
         </div>
+      </div>
+    </div>
+    <div v-if="selectedProduct" class="modal" @click.self="closeProductDetails">
+      <div class="modal-content">
+        <span class="close" @click="closeProductDetails">&times;</span>
+        <h2>{{ selectedProduct.name }}</h2>
+        <img :src="selectedProduct.image_url" alt="Product Image" />
+        <p>{{ selectedProduct.description }}</p>
+        <div class="price">{{ selectedProduct.price }} USD</div>
+        <button @click="addToCart(selectedProduct)">Add to Cart</button>
       </div>
     </div>
   </div>
@@ -58,6 +76,8 @@ export default {
       selectedCategory: '',
       showCart: false,
       cartItems: [],
+      paymentMethod: 'credit-card',
+      selectedProduct: null,
     };
   },
   computed: {
@@ -139,8 +159,50 @@ export default {
         console.error('Error fetching cart items:', err);
       }
     },
-    checkout() {
-      alert('Checkout functionality is not implemented yet.');
+    async updateCartItem(item) {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`http://localhost:8080/api/carts/${item.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ quantity: item.quantity }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          alert(data.message);
+        }
+      } catch (err) {
+        console.error('Error updating cart item:', err);
+      }
+    },
+    async checkout() {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('http://localhost:8080/api/checkout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            paymentMethod: this.paymentMethod,
+            items: this.cartItems,
+          }),
+        });
+        const data = await response.json();
+        if (response.ok) {
+          alert('Замовлення успішно оформлено');
+          this.cartItems = [];
+          this.showCart = false;
+        } else {
+          alert(data.message);
+        }
+      } catch (err) {
+        console.error('Error during checkout:', err);
+      }
     },
     toggleCart() {
       this.showCart = !this.showCart;
@@ -153,6 +215,12 @@ export default {
           (this.searchQuery === '' || product.name.toLowerCase().includes(this.searchQuery.toLowerCase()))
         );
       });
+    },
+    showProductDetails(product) {
+      this.selectedProduct = product;
+    },
+    closeProductDetails() {
+      this.selectedProduct = null;
     },
   },
 };
@@ -307,5 +375,22 @@ button:hover {
   font-size: 1.2rem;
   font-weight: bold;
   margin-top: 1rem;
+}
+
+.payment-method {
+  margin-top: 1rem;
+  text-align: left;
+}
+
+.payment-method label {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.payment-method select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
 </style>

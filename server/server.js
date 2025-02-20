@@ -14,6 +14,7 @@ const secretKey = '20252025';
 app.use(bodyParser.json());
 app.use(cors());
 app.use(express.static(path.join(__dirname, '../public')));
+app.use('/images', express.static(path.join(__dirname, '../public/images')));
 
 const db = mysql.createConnection({
   host: 'localhost',
@@ -30,9 +31,10 @@ db.connect((err) => {
   console.log('Підключено до бази даних MySQL');
 });
 
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
 
+
+
+//машрут для завантаження зображень профілю
 app.post('/api/user/profile_image', upload.single('image'), (req, res) => {
   const token = req.headers.authorization.split(' ')[1];
   jwt.verify(token, secretKey, (err, decoded) => {
@@ -52,7 +54,7 @@ app.post('/api/user/profile_image', upload.single('image'), (req, res) => {
     });
   });
 });
-
+//маршрут для отримання зображень профілю
 app.get('/api/user/profile_image', (req, res) => {
   const token = req.headers.authorization.split(' ')[1];
   jwt.verify(token, secretKey, (err, decoded) => {
@@ -77,6 +79,7 @@ app.get('/api/user/profile_image', (req, res) => {
   });
 });
 
+// Машрут для реєстрації користувача
 app.post('/api/register', async (req, res) => {
   const { username, email, password, full_name, phone, address } = req.body;
   const hashedPassword = await bcrypt.hash(password, 10);
@@ -90,7 +93,7 @@ app.post('/api/register', async (req, res) => {
     }
   });
 });
-
+//маршрут для отримання даних користувача
 app.post('/api/login', (req, res) => {
   const { email, password } = req.body;
   const query = 'SELECT * FROM users WHERE email = ?';
@@ -114,7 +117,7 @@ app.post('/api/login', (req, res) => {
     res.json({ token });
   });
 });
-
+//маршрут для отримання даних користувача
 app.get('/api/user', (req, res) => {
   const token = req.headers.authorization.split(' ')[1];
   jwt.verify(token, secretKey, (err, decoded) => {
@@ -133,7 +136,7 @@ app.get('/api/user', (req, res) => {
     });
   });
 });
-
+//Машрут для отримання продуктів
 app.post('/api/products', (req, res) => {
   const token = req.headers.authorization.split(' ')[1];
   jwt.verify(token, secretKey, (err, decoded) => {
@@ -158,6 +161,25 @@ app.post('/api/products', (req, res) => {
   });
 });
 
+// Налаштування Multer для завантаження зображень
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, './public/image'); // Папка для збереження зображень
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname)); // Унікальна назва файлу
+  }
+});
+const upload = multer({ storage: storage });
+
+// Маршрут для завантаження зображень товарів
+app.post('/upload-product-image', upload.single('productImage'), (req, res) => {
+  const filePath = '/image/' + req.file.filename;
+  res.json({ imageUrl: filePath });
+});
+
+
+//маршрут для додавання категорії
 app.get('/api/categories', (req, res) => {
   const query = 'SELECT * FROM categories';
   db.query(query, (err, results) => {
@@ -169,7 +191,7 @@ app.get('/api/categories', (req, res) => {
     res.json(results);
   });
 });
-
+//маршрут для додавання виробника
 app.get('/api/manufacturers', (req, res) => {
   const query = 'SELECT * FROM manufacturers';
   db.query(query, (err, results) => {
@@ -181,7 +203,7 @@ app.get('/api/manufacturers', (req, res) => {
     res.json(results);
   });
 });
-
+//маршрут для отримання продуктів
 app.get('/api/products', (req, res) => {
   const query = 'SELECT * FROM products';
   db.query(query, (err, results) => {
@@ -193,7 +215,7 @@ app.get('/api/products', (req, res) => {
     res.json(results);
   });
 });
-
+//маршрут для додавання до кошика
 app.post('/api/carts', (req, res) => {
   const token = req.headers.authorization.split(' ')[1];
   jwt.verify(token, secretKey, (err, decoded) => {
@@ -213,7 +235,7 @@ app.post('/api/carts', (req, res) => {
     });
   });
 });
-
+//маршрут для додавання до кошика
 app.get('/api/carts', (req, res) => {
   const token = req.headers.authorization.split(' ')[1];
   jwt.verify(token, secretKey, (err, decoded) => {
@@ -226,25 +248,6 @@ app.get('/api/carts', (req, res) => {
       if (err) {
         console.error('Помилка при отриманні товарів з кошика:', err);
         res.status(500).json({ message: 'Помилка при отриманні товарів з кошика' });
-        return;
-      }
-      res.json(results);
-    });
-  });
-});
-
-app.get('/api/purchase-history', (req, res) => {
-  const token = req.headers.authorization.split(' ')[1];
-  jwt.verify(token, secretKey, (err, decoded) => {
-    if (err) {
-      res.status(401).json({ message: 'Невірний токен' });
-      return;
-    }
-    const query = 'SELECT orders.id, products.name, products.price, order_items.quantity, orders.created_at FROM orders JOIN order_items ON orders.id = order_items.order_id JOIN products ON order_items.product_id = products.id WHERE orders.user_id = ? ORDER BY orders.created_at DESC';
-    db.query(query, [decoded.id], (err, results) => {
-      if (err) {
-        console.error('Помилка при отриманні історії покупок:', err);
-        res.status(500).json({ message: 'Помилка при отриманні історії покупок' });
         return;
       }
       res.json(results);

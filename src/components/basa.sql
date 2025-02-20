@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS users (
     full_name VARCHAR(255),
     phone VARCHAR(20),
     address VARCHAR(255),
-    role ENUM('user', 'manager', 'admin') DEFAULT 'user'
+    role ENUM('user', 'manager', 'admin') DEFAULT 'user',
+    profile_image longblob
 );
 
 
@@ -61,6 +62,7 @@ CREATE TABLE carts (
   FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
+
 -- Таблиця елементів кошика (запчастини в кошику)
 CREATE TABLE IF NOT EXISTS  cart_items (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -101,8 +103,39 @@ CREATE INDEX idx_products_manufacturer ON products(manufacturer_id);
 
 select *from users;
 select *from manufacturers;
+select *from products;
 select *from categories;
 select *from carts;
 select *from cart_items;
 select *from orders;
 select *from order_items;
+
+INSERT INTO manufacturers (name, country, description) VALUES
+('Bosch', 'Germany', 'High-quality automotive parts'),
+('Brembo', 'Italy', 'Brake systems and components'),
+('Denso', 'Japan', 'Automotive electrical components'),
+('Valeo', 'France', 'Automotive lighting and electronics'),
+('Delphi', 'USA', 'Automotive fuel systems and components'),
+('ATE', 'Germany', 'Brake systems and components'),
+('TRW', 'USA', 'Automotive safety systems'),
+('Hella', 'Germany', 'Automotive lighting and electronics');
+
+INSERT INTO categories (name, description) VALUES
+('Двигун', 'Engine components and parts'),
+('Підвіска', 'Suspension components and parts'),
+('Гальмівна система', 'Brake system components and parts'),
+('Електрика', 'Electrical components and parts'),
+('Кузовні деталі', 'Body parts and components'),
+('Вихлопна система', 'Exhaust system components and parts'),
+('Трансмісія', 'Transmission components and parts'),
+('Охолоджувальна система', 'Cooling system components and parts');
+
+INSERT INTO products (category_id, manufacturer_id, name, description, price, stock, image_url, vehicle_make, vehicle_model, year_from, year_to)
+VALUES
+(1, 1, 'Тормозні колодки Bosch', 'Тормозні колодки Bosch для автомобілей BMW і Audi', 450.00, 50, 'https://autoprotect.ua/pics/prod/big/36848_66726.jpg', 'BMW', '3 Series', 2015, 2020),
+(2, 2, 'Масляний фільтр Mann', 'Масляний фільтр Mann для дизельних двигунів Volkswagen', 250.00, 120, 'https://asfilter.com.ua/upload/iblock/f89/MANN_FILTER-W671.jpg', 'Volkswagen', 'Passat', 2010, 2018),
+(3, 3, 'Амортизатор KYB', 'Амортизатор KYB для легкових автомобілей Toyota', 650.00, 30, 'https://kyb.biz.ua/image/amortizatori-kyb-agx.jpg', 'Toyota', 'Corolla', 2008, 2015),
+(4, 4, 'Свічка зажигания NGK', 'Комплект свічків зажигания NGK для автомобілей Hyundai и Kia', 320.00, 75, 'https://oregon.com.ua/image/cache/catalog/oregon/8/parts-com-v-vspfiles-photos-CMR6A-2-1000x1000.jpg', 'Hyundai', 'Elantra', 2011, 2021),
+(5, 1, 'Тормозні диски ATE', 'Тормозні диски ATE для автомобілей Audi A4', 780.00, 20, 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTOtSUaRSlsxZ8Eft3VNKUb7p9klj4JTleDow&s', 'Audi', 'A4', 2013, 2020),
+(2, 2, 'Фільтр салона Bosch', 'Фільтр салона Bosch для автомобілей Mercedes-Benz', 300.00, 100, 'https://vinkod.com.ua/imgs/bosch/0986628540_460x330.jpg', 'Mercedes-Benz', 'C-Class', 2016, 2023);
+

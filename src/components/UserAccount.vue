@@ -16,12 +16,15 @@
     <div class="main-content">
       <div class="history">
         <h2>Історія покупок</h2>
-        <div v-for="item in purchaseHistory" :key="item.id" class="item">
-          <div class="item-details">
-            <span class="item-name">{{ item.name }}</span>
-            <span class="item-price">{{ item.price }} USD</span>
-            <span class="item-quantity">Кількість: {{ item.quantity }}</span>
-            <span class="item-date">Дата: {{ new Date(item.created_at).toLocaleDateString() }}</span>
+        <div v-if="purchaseHistory.length === 0">Історія покупок порожня</div>
+        <div v-else>
+          <div v-for="item in purchaseHistory" :key="item.id" class="item">
+            <div class="item-details">
+              <span class="item-name">{{ item.name }}</span>
+              <span class="item-price">{{ item.price }} USD</span>
+              <span class="item-quantity">Кількість: {{ item.quantity }}</span>
+              <span class="item-date">Дата: {{ new Date(item.created_at).toLocaleDateString() }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -164,26 +167,20 @@ export default {
 
 <style scoped>
 .user-page {
-  position: relative;
   min-height: 100vh;
   font-family: Arial, sans-serif;
   background-image: url('@/assets/background.jpg');
   background-size: cover;
-  background-position: center;
   padding-bottom: 50px;
-}
-
-.main-content, .profile-header {
-  background-color: rgba(255, 255, 255, 0.9);
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .profile-header {
   display: flex;
   align-items: center;
   margin-bottom: 20px;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 20px;
+  border-radius: 10px;
 }
 
 .avatar-img {
@@ -242,13 +239,10 @@ export default {
 }
 
 .main-content {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
-
-.history {
-  width: 100%;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .history h2 {
@@ -271,15 +265,7 @@ export default {
   font-weight: bold;
 }
 
-.item-price {
-  margin-top: 5px;
-}
-
-.item-quantity {
-  margin-top: 5px;
-}
-
-.item-date {
+.item-price, .item-quantity, .item-date {
   margin-top: 5px;
 }
 
